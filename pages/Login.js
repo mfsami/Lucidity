@@ -2,20 +2,52 @@ import React, { useState } from "react";
 import { Text, View, StyleSheet } from "react-native";
 import Button from "../components/Button";
 import Input from "../components/Input";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function Login({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    clientId:
+      "563371152440-ksie13m8mk2fafj06c578m70gj3gov86.apps.googleusercontent.com",
+    redirectUri: "https://auth.expo.io/@mfsam/Lucidity",
+    scopes: ["profile", "email"],
+  });
 
+  // Function to handle your app's internal credentials validation
   function validateCredentials() {
-    // we can check db here
-    if (password && email) {
-      // just check if they are populated for now
+    if (email && password) {
+      // Mock check, you can add your actual app logic here
+      Alert.alert("Credentials Validated", `Email: ${email}`);
       navigation.navigate("PopulateInfo");
+    } else {
+      Alert.alert("Error", "Please enter email and password.");
     }
-    // ------------------- Error Handling ----------------
-    // ------------------- Error Handling ----------------
   }
+
+  // Fetch the user's info after successful Google sign-in
+  async function fetchGoogleUserInfo(token) {
+    let userInfoResponse = await fetch(
+      "https://www.googleapis.com/userinfo/v2/me",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    let userInfo = await userInfoResponse.json();
+    console.log(userInfo);
+    Alert.alert("Google Login Success", `Hi, ${userInfo.name}`);
+  }
+
+  // Effect to check when Google login is successful
+  React.useEffect(() => {
+    if (response?.type === "success") {
+      const { authentication } = response;
+      fetchGoogleUserInfo(authentication.accessToken);
+    }
+  }, [response]);
 
   return (
     <View style={styles.container}>
@@ -37,6 +69,7 @@ export default function Login({ navigation }) {
           text="Sign in with Google"
           trailing="rightarrow"
           leading="google"
+          callback={() => promptAsync()}
         />
         <Button
           type="medium"
@@ -89,13 +122,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5E7EB",
     height: 1,
     flex: 1,
-    opacity : 0.4,
+    opacity: 0.4,
   },
   dividerText: {
     color: "#E5E7EB",
     fontSize: 14,
     paddingHorizontal: 10,
-    opacity : 0.4,
+    opacity: 0.4,
   },
   rowThree: {
     width: "100%",
